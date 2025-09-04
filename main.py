@@ -131,8 +131,16 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
             # print(silence_frames)
             # 如果连续静音时间够长，认为一句话结束
             if silence_frames > MAX_SILENCE_FRAMES and len(audio_buffer) > 0:
+                # 计算传入语音的时间长度
+                duration = len(audio_buffer) / RATE
+                print(f"录音时长: {duration:.2f}秒")
+                # 记录识别开始时间
+                start_time = time.time()
                 result = model.generate(audio_buffer)
+                # 计算识别用时
+                recognition_time = time.time() - start_time
                 print("识别结果:", result)
+                print(f"识别用时: {recognition_time:.4f}秒")
                 map_to_execution(result, command_queue)
                 # 清空缓冲
                 audio_buffer = b''
@@ -178,7 +186,12 @@ def command_execution_thread(command_queue, stop_event):
             command = command_queue.get(timeout=0.1)
             if command in COMMAND_MAPPING:
                 print(f"执行指令: {command}")
+                # 记录执行开始时间
+                start_time = time.time()
                 execute_command(COMMAND_MAPPING[command])
+                # 计算执行用时
+                execution_time = time.time() - start_time
+                print(f"执行用时: {execution_time:.4f}秒")
         except Empty:
             continue
         except Exception as e:
