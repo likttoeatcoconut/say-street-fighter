@@ -14,7 +14,7 @@ import funASR
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000  # 16kHz对于语音识别足够
-CHUNK = int(RATE * 0.03)  # 小块数据降低延迟
+CHUNK = int(RATE * 0.01)  # 小块数据降低延迟
 VAD_AGGRESSIVENESS = 3  # VAD激进程度 (0-3)
 
 # 设备选择 (如果自动选择不正确，可以手动指定)
@@ -25,8 +25,8 @@ COMMAND_MAPPING = {
     "hadouken": ["down", "down", "right", "p"],
     "shoryuken": ["right", "down", "right", "p"],
     "sonicboom": ["back", "back", "p"],
-    "发波": ["s", "d", "o"],
-    "升龙": ["d", "s", "d", "i"],
+    "波": ["s", ("s", "d"), "d", "o"],
+    "升": ["d", ("s", "d"), "s", ("s", "d"),"d","i"],
     # 添加更多指令...
 }
 
@@ -128,7 +128,7 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
             else:
                 audio_buffer += data
                 silence_frames = 0
-            print(silence_frames)
+            # print(silence_frames)
             # 如果连续静音时间够长，认为一句话结束
             if silence_frames > MAX_SILENCE_FRAMES and len(audio_buffer) > 0:
                 result = model.generate(audio_buffer)
@@ -187,13 +187,24 @@ def command_execution_thread(command_queue, stop_event):
     print("指令执行线程结束")
 
 
-def execute_command(key_sequence):
-    """执行按键序列"""
-    for key in key_sequence:
-        keyboard.press(key)
-        time.sleep(0.05)  # 短暂延迟模拟人手操作
-        keyboard.release(key)
-        time.sleep(0.05)
+def execute_command(keys):
+    for key in keys:
+        if isinstance(key, tuple):
+            # 处理同时按键的情况
+            for k in key:
+                keyboard.press(k)
+
+            # 添加适当的延迟
+            time.sleep(0.02)
+
+            # 释放按键
+            for k in key:
+                keyboard.release(k)
+        else:
+            # 处理单个按键的情况
+            keyboard.press(key)
+            time.sleep(0.02)
+            keyboard.release(key)
 
 
 # ==================== 主程序 ====================

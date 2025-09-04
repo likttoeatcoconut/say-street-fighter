@@ -11,8 +11,8 @@ from datetime import datetime
 
 
 class FunASR:
-    def __init__(self, model_name="iic/speech_charctc_kws_phone-xiaoyun", keywords="小云小云,发波,升龙", output_dir="./outputs/debug",
-                 device='cuda:0'):
+    def __init__(self, model_name="iic/speech_charctc_kws_phone-xiaoyun", keywords="小云小云,bo,升", output_dir="./outputs/debug",
+                 device='cpu'):
         self.model = AutoModel(
             model=model_name,
             keywords=keywords,
