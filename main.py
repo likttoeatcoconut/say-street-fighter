@@ -25,8 +25,11 @@ COMMAND_MAPPING = {
     "hadouken": ["down", "down", "right", "p"],
     "shoryuken": ["right", "down", "right", "p"],
     "sonicboom": ["back", "back", "p"],
+    "发波": ["s", "d", "o"],
+    "升龙": ["d", "s", "d", "i"],
     # 添加更多指令...
 }
+
 
 # ==================== 音频采集进程 ====================
 def audio_capture_process(audio_queue, stop_event):
@@ -76,6 +79,7 @@ def audio_capture_process(audio_queue, stop_event):
 
 class AudioCallbackHandler:
     """处理音频回调的类"""
+
     def __init__(self, vad, audio_queue):
         self.vad = vad
         self.audio_queue = audio_queue
@@ -83,18 +87,18 @@ class AudioCallbackHandler:
     def callback(self, in_data, frame_count, time_info, status):
         """PyAudio回调函数，处理音频数据"""
         # 使用VAD检测是否有语音
-        is_speech = False
-        try:
-            is_speech = self.vad.is_speech(in_data, RATE)
-        except:
-            # 有时VAD会因数据长度问题抛出异常，忽略这些帧
-
-            pass
-
-        # 只有当检测到语音时才将数据放入队列
-        if is_speech:
-            self.audio_queue.put(in_data)
-        # self.audio_queue.put(in_data)
+        # is_speech = False
+        # try:
+        #     is_speech = self.vad.is_speech(in_data, RATE)
+        # except:
+        #     # 有时VAD会因数据长度问题抛出异常，忽略这些帧
+        #
+        #     pass
+        #
+        # # 只有当检测到语音时才将数据放入队列
+        # if is_speech:
+        #     self.audio_queue.put(in_data)
+        self.audio_queue.put(in_data)
         return (None, pyaudio.paContinue)
 
 
@@ -106,64 +110,48 @@ def find_low_latency_device(p):
 
 # ==================== 语音识别进程 ====================
 def speech_recognition_process(audio_queue, command_queue, stop_event):
-    """语音识别进程，处理音频并识别指令"""
     print("语音识别进程启动")
-
-    # 初始化语音识别模型
-    # 这里应该替换为实际的本地轻量级模型
-    # 例如: model = load_your_model()
     model = funASR.FunASR()
 
     audio_buffer = b''
     silence_frames = 0
-    MAX_SILENCE_FRAMES = 5  # 持续10帧静音则认为语音结束
-
+    MAX_SILENCE_FRAMES = 5  # 200ms * 20 = 4秒静音判定结束
+    # 初始化VAD
+    vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
     while not stop_event.is_set():
         try:
-            # 非阻塞获取音频数据
             data = audio_queue.get(timeout=0.1)
-            audio_buffer += data
-            silence_frames = 0  # 重置静音计数
 
-            # 当积累足够长的音频后进行处理
-            if len(audio_buffer) > RATE * 1:  # 1秒音频
-                # 这里应该调用实际的语音识别模型
-                command = model.generate(audio_buffer)
-
-                # 模拟识别过程 - 实际应替换为模型推理
-                # command = simulate_speech_recognition(audio_buffer)
-                print(f"识别结果: {command}")
-
-                # if command in COMMAND_MAPPING:
-                #     print(f"识别到指令: {command}")
-                #     command_queue.put(command)
-                if "发波" in command or "升龙" in command:
-                    # 清空缓冲区
-                    audio_buffer = b''
-                else:
-                    # 清空一半
-                    half = (len(audio_buffer) // 4) * 2
-                    audio_buffer = audio_buffer[half:]
-        except Empty:
-            # 队列为空时，增加静音计数
-            silence_frames += 1
-            if silence_frames > MAX_SILENCE_FRAMES and audio_buffer:
-                # 长时间静音，处理缓冲区中剩余的音频
-                if len(audio_buffer) > CHUNK * 3:  # 至少有3帧数据
-                    command = model.generate(audio_buffer)
-                    # command = simulate_speech_recognition(audio_buffer)
-                    print(f"识别结果: {command}")
-
-                    # if command in COMMAND_MAPPING:
-                    #     print(f"识别到指令: {command}")
-                    #     command_queue.put(command)
-
+            # 判断是否静音
+            if not vad.is_speech(data, RATE):
+                silence_frames += 1
+            else:
+                audio_buffer += data
+                silence_frames = 0
+            print(silence_frames)
+            # 如果连续静音时间够长，认为一句话结束
+            if silence_frames > MAX_SILENCE_FRAMES and len(audio_buffer) > 0:
+                result = model.generate(audio_buffer)
+                print("识别结果:", result)
+                map_to_execution(result, command_queue)
+                # 清空缓冲
                 audio_buffer = b''
                 silence_frames = 0
-        except Exception as e:
-            print(f"语音识别错误: {e}")
 
-    print("语音识别进程结束")
+        except Empty:
+            continue
+
+
+def map_to_execution(recognition_result, command_queue):
+    """
+    映射识别结果到执行函数
+    recognition_result:[{'key': 'rand_key_NO6n9JEC3HqdZ', 'text': 'detected 发波 0.21558110781628012'}]
+    """
+    result_ = recognition_result[0]
+    for key in COMMAND_MAPPING.keys():
+        if key in result_['text']:
+            # 塞入操作队列
+            command_queue.put(key)
 
 
 def simulate_speech_recognition(audio_data):
@@ -172,8 +160,6 @@ def simulate_speech_recognition(audio_data):
     # 1. 提取音频特征 (MFCC等)
     # 2. 使用训练好的模型进行推理
     # 3. 返回识别结果
-
-
 
     # 简单模拟：随机返回一个指令或None
     import random

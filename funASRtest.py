@@ -9,12 +9,12 @@ model = AutoModel(
     device='cuda:0'
 )
 
-test_wav = "fabo.wav"
+test_wav = "outputs/debug/audio_20250904_170302_859438.wav"
 
 # 在调用模型之前记录开始时间
 start_time = time.time()
 
-res = model.generate(input=test_wav, cache={},)
+res = model.generate(input=test_wav, cache={})
 
 # 在调用模型之后记录结束时间
 end_time = time.time()
