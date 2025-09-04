@@ -6,7 +6,7 @@ model = AutoModel(
     model="iic/speech_charctc_kws_phone-xiaoyun",
     keywords="发波",
     output_dir="./outputs/debug",
-    device='cuda:0'
+    device='cpu'
 )
 
 test_wav = "outputs/debug/audio_20250904_170302_859438.wav"

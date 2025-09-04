@@ -115,7 +115,7 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
 
     audio_buffer = b''
     silence_frames = 0
-    MAX_SILENCE_FRAMES = 5  # 200ms * 20 = 4秒静音判定结束
+    MAX_SILENCE_FRAMES = 1  # 200ms * 20 = 4秒静音判定结束
     # 初始化VAD
     vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
     while not stop_event.is_set():
