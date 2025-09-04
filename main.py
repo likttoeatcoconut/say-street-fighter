@@ -7,13 +7,15 @@ import numpy as np
 import keyboard  # 需要安装: pip install keyboard
 import threading
 
+import funASR
+
 # ==================== 配置参数 ====================
 # 音频参数
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000  # 16kHz对于语音识别足够
-CHUNK = 512  # 小块数据降低延迟
-VAD_AGGRESSIVENESS = 2  # VAD激进程度 (0-3)
+CHUNK = int(RATE * 0.03)  # 小块数据降低延迟
+VAD_AGGRESSIVENESS = 3  # VAD激进程度 (0-3)
 
 # 设备选择 (如果自动选择不正确，可以手动指定)
 INPUT_DEVICE_INDEX = None  # 设为None自动选择，或指定具体索引
@@ -81,18 +83,18 @@ class AudioCallbackHandler:
     def callback(self, in_data, frame_count, time_info, status):
         """PyAudio回调函数，处理音频数据"""
         # 使用VAD检测是否有语音
-        # is_speech = False
-        # try:
-        #     is_speech = self.vad.is_speech(in_data, RATE)
-        #     print("1")
-        # except:
-        #     # 有时VAD会因数据长度问题抛出异常，忽略这些帧
-        #     pass
-        #
-        # # 只有当检测到语音时才将数据放入队列
-        # if is_speech:
-        #     self.audio_queue.put(in_data)
-        self.audio_queue.put(in_data)
+        is_speech = False
+        try:
+            is_speech = self.vad.is_speech(in_data, RATE)
+        except:
+            # 有时VAD会因数据长度问题抛出异常，忽略这些帧
+
+            pass
+
+        # 只有当检测到语音时才将数据放入队列
+        if is_speech:
+            self.audio_queue.put(in_data)
+        # self.audio_queue.put(in_data)
         return (None, pyaudio.paContinue)
 
 
@@ -110,10 +112,11 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
     # 初始化语音识别模型
     # 这里应该替换为实际的本地轻量级模型
     # 例如: model = load_your_model()
+    model = funASR.FunASR()
 
     audio_buffer = b''
     silence_frames = 0
-    MAX_SILENCE_FRAMES = 10  # 持续10帧静音则认为语音结束
+    MAX_SILENCE_FRAMES = 5  # 持续10帧静音则认为语音结束
 
     while not stop_event.is_set():
         try:
@@ -125,30 +128,35 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
             # 当积累足够长的音频后进行处理
             if len(audio_buffer) > RATE * 1:  # 1秒音频
                 # 这里应该调用实际的语音识别模型
-                # command = model.predict(audio_buffer)
+                command = model.generate(audio_buffer)
 
                 # 模拟识别过程 - 实际应替换为模型推理
-                command = simulate_speech_recognition(audio_buffer)
+                # command = simulate_speech_recognition(audio_buffer)
+                print(f"识别结果: {command}")
 
-                if command in COMMAND_MAPPING:
-                    print(f"识别到指令: {command}")
-                    command_queue.put(command)
-
-                # 清空缓冲区
-                audio_buffer = b''
-
+                # if command in COMMAND_MAPPING:
+                #     print(f"识别到指令: {command}")
+                #     command_queue.put(command)
+                if "发波" in command or "升龙" in command:
+                    # 清空缓冲区
+                    audio_buffer = b''
+                else:
+                    # 清空一半
+                    half = (len(audio_buffer) // 4) * 2
+                    audio_buffer = audio_buffer[half:]
         except Empty:
             # 队列为空时，增加静音计数
             silence_frames += 1
             if silence_frames > MAX_SILENCE_FRAMES and audio_buffer:
                 # 长时间静音，处理缓冲区中剩余的音频
                 if len(audio_buffer) > CHUNK * 3:  # 至少有3帧数据
-                    # command = model.predict(audio_buffer)
-                    command = simulate_speech_recognition(audio_buffer)
+                    command = model.generate(audio_buffer)
+                    # command = simulate_speech_recognition(audio_buffer)
+                    print(f"识别结果: {command}")
 
-                    if command in COMMAND_MAPPING:
-                        print(f"识别到指令: {command}")
-                        command_queue.put(command)
+                    # if command in COMMAND_MAPPING:
+                    #     print(f"识别到指令: {command}")
+                    #     command_queue.put(command)
 
                 audio_buffer = b''
                 silence_frames = 0
@@ -164,6 +172,8 @@ def simulate_speech_recognition(audio_data):
     # 1. 提取音频特征 (MFCC等)
     # 2. 使用训练好的模型进行推理
     # 3. 返回识别结果
+
+
 
     # 简单模拟：随机返回一个指令或None
     import random
