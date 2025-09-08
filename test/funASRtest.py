@@ -5,7 +5,7 @@ from funasr import AutoModel
 model = AutoModel(
     model="iic/speech_charctc_kws_phone-xiaoyun",
     keywords="发波",
-    output_dir="./outputs/debug",
+    output_dir="../outputs/debug",
     device='cpu'
 )
 

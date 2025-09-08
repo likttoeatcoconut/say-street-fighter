@@ -57,4 +57,4 @@ def record_audio(duration=1, sample_rate=16000, channels=1, chunk=1024, output_f
 
 if __name__ == "__main__":
     # 录制1秒音频，保存为recorded_audio.wav
-    record_audio(duration=2, output_file="sl.wav")
+    record_audio(duration=2, output_file="wav/sl.wav")
