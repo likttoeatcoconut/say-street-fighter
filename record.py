@@ -15,7 +15,6 @@ def record_audio(duration=1, sample_rate=16000, channels=1, chunk=1024, output_f
     """
     # 初始化PyAudio
     p = pyaudio.PyAudio()
-
     # 打开音频流
     stream = p.open(format=pyaudio.paInt16,
                     channels=channels,

@@ -22,11 +22,10 @@ INPUT_DEVICE_INDEX = None  # 设为None自动选择，或指定具体索引
 
 # 语音指令映射
 COMMAND_MAPPING = {
-    "hadouken": ["down", "down", "right", "p"],
-    "shoryuken": ["right", "down", "right", "p"],
-    "sonicboom": ["back", "back", "p"],
-    "波": ["s", ("s", "d"), "d", "o"],
-    "升": ["d", ("s", "d"), "s", ("s", "d"),"d","i"],
+    # "波": ["s", ("s", "d"), "d", "o"],
+    # "升": ["d", ("s", "d"), "s", ("s", "d"),"d","i"],
+     "波": ["i"],
+     "升": [("d","i")],
     # 添加更多指令...
 }
 
@@ -86,18 +85,6 @@ class AudioCallbackHandler:
 
     def callback(self, in_data, frame_count, time_info, status):
         """PyAudio回调函数，处理音频数据"""
-        # 使用VAD检测是否有语音
-        # is_speech = False
-        # try:
-        #     is_speech = self.vad.is_speech(in_data, RATE)
-        # except:
-        #     # 有时VAD会因数据长度问题抛出异常，忽略这些帧
-        #
-        #     pass
-        #
-        # # 只有当检测到语音时才将数据放入队列
-        # if is_speech:
-        #     self.audio_queue.put(in_data)
         self.audio_queue.put(in_data)
         return (None, pyaudio.paContinue)
 
@@ -131,6 +118,7 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
             # print(silence_frames)
             # 如果连续静音时间够长，认为一句话结束
             if silence_frames > MAX_SILENCE_FRAMES and len(audio_buffer) > 0:
+                print('-'*10)
                 # 计算传入语音的时间长度
                 duration = len(audio_buffer) / RATE
                 print(f"录音时长: {duration:.2f}秒")
@@ -160,20 +148,6 @@ def map_to_execution(recognition_result, command_queue):
         if key in result_['text']:
             # 塞入操作队列
             command_queue.put(key)
-
-
-def simulate_speech_recognition(audio_data):
-    """模拟语音识别函数 - 实际应替换为真正的模型推理"""
-    # 这里只是模拟，实际应用中应该:
-    # 1. 提取音频特征 (MFCC等)
-    # 2. 使用训练好的模型进行推理
-    # 3. 返回识别结果
-
-    # 简单模拟：随机返回一个指令或None
-    import random
-    if random.random() > 0.9:  # 10%的概率返回指令
-        return random.choice(list(COMMAND_MAPPING.keys()))
-    return None
 
 
 # ==================== 指令执行线程 ====================
@@ -224,7 +198,7 @@ def execute_command(keys):
 def main():
     print("启动语音控制街霸系统...")
 
-    # 创建进程间通信队列
+    # 创建进程间通信队列l
     audio_queue = mp.Queue(maxsize=100)  # 音频数据队列
     command_queue = mp.Queue(maxsize=10)  # 指令队列
 
