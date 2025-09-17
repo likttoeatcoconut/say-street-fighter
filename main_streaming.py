@@ -16,7 +16,7 @@ FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000  # 16kHz对于语音识别足够
 # CHUNK = int(RATE * 0.01)  # 小块数据降低延迟
-CHUNK = 960  # 小块数据降低延迟 单位：采样点
+CHUNK = 960*4  # 小块数据降低延迟 单位：采样点
 VAD_AGGRESSIVENESS = 3  # VAD激进程度 (0-3)
 
 # 设备选择 (如果自动选择不正确，可以手动指定)
@@ -86,7 +86,7 @@ class AudioCallbackHandler:
     def __init__(self, vad, audio_queue):
         self.vad = vad
         self.audio_queue = audio_queue
-        self.MAX_SILENCE_FRAMES = 5
+        self.MAX_SILENCE_FRAMES = 1
         self.silence_count = 0
 
     def callback(self, in_data, frame_count, time_info, status):
@@ -147,6 +147,10 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
             recognition_time = time.time() - start_time
             print("识别结果:", result)
             print(f"识别用时: {recognition_time:.4f}秒")
+            zi = result[0]['text']
+            # 键盘输入该文字
+            keyboard.write(zi)
+
             # map_to_execution(result['kws_list'], command_queue)
 
         except Empty:

@@ -16,7 +16,7 @@ class FunASRStreaming:
                  ):
         # 添加启用调试模式的参数
         if chunk_size is None:
-            chunk_size = [0, 1, 4]
+            chunk_size = [0, 4, 4]
         self.chunk_size = chunk_size
         self.encoder_chunk_look_back = encoder_chunk_look_back
         self.decoder_chunk_look_back = decoder_chunk_look_back
