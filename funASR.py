@@ -7,7 +7,7 @@ from funasr import AutoModel
 import threading
 
 class FunASR:
-    def __init__(self, model_name="iic/speech_charctc_kws_phone-xiaoyun", keywords="多达,发波,升龙，泵",
+    def __init__(self, model_name="iic/speech_charctc_kws_phone-xiaoyun", keywords="多达,波,升,迸发",
                  output_dir="./outputs/debug", device='cpu', enable_debug=False):
         # 添加启用调试模式的参数
         self.enable_debug = enable_debug
