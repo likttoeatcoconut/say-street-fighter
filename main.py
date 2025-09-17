@@ -84,12 +84,34 @@ class AudioCallbackHandler:
     def __init__(self, vad, audio_queue):
         self.vad = vad
         self.audio_queue = audio_queue
+        self.audio_buffer = b''
+        self.silence_frames = 0
+        self.speech_frames = 0  # 用于跟踪语音帧数
+        self.MAX_SILENCE_FRAMES = 1
 
     def callback(self, in_data, frame_count, time_info, status):
         """PyAudio回调函数，处理音频数据"""
-        self.audio_queue.put(in_data)
-        return (None, pyaudio.paContinue)
+        # 在音频采集层进行VAD检测
+        if self.vad.is_speech(in_data, RATE):
+            self.audio_buffer += in_data
+            self.silence_frames = 0
+            self.speech_frames += 1
+        else:
+            self.silence_frames += 1
+            # 即使是静音，我们也重置语音帧计数器，以便下次说话时重新开始计数
 
+        # 如果连续静音时间够长，或者语音时长超过0.3秒，认为一句话结束
+        speech_duration = self.speech_frames * 0.01
+        if (self.silence_frames > self.MAX_SILENCE_FRAMES and len(self.audio_buffer) > 0) or \
+                (speech_duration >= 0.15 and len(self.audio_buffer) > 0):
+            # 将有效的音频数据放入队列
+            self.audio_queue.put(self.audio_buffer)
+            # 清空缓冲
+            self.audio_buffer = b''
+            self.silence_frames = 0
+            self.speech_frames = 0  # 重置语音帧计数器
+
+        return (None, pyaudio.paContinue)
 
 def find_low_latency_device(p):
     """尝试找到低延迟的音频输入设备"""
@@ -102,39 +124,23 @@ def speech_recognition_process(audio_queue, command_queue, stop_event):
     print("语音识别进程启动")
     model = funASR.FunASR()
 
-    audio_buffer = b''
-    silence_frames = 0
-    MAX_SILENCE_FRAMES = 1  # 200ms * 20 = 4秒静音判定结束
-    # 初始化VAD
-    vad = webrtcvad.Vad(VAD_AGGRESSIVENESS)
     while not stop_event.is_set():
         try:
-            data = audio_queue.get(timeout=0.1)
+            # 直接从队列获取有效音频数据
+            audio_buffer = audio_queue.get(timeout=0.1)
 
-            # 判断是否静音
-            if not vad.is_speech(data, RATE):
-                silence_frames += 1
-            else:
-                audio_buffer += data
-                silence_frames = 0
-            # print(silence_frames)
-            # 如果连续静音时间够长，认为一句话结束
-            if silence_frames > MAX_SILENCE_FRAMES and len(audio_buffer) > 0:
-                print('-'*10)
-                # 计算传入语音的时间长度
-                duration = len(audio_buffer) / RATE
-                print(f"录音时长: {duration:.2f}秒")
-                # 记录识别开始时间
-                start_time = time.time()
-                result = model.generate(audio_buffer)
-                # 计算识别用时
-                recognition_time = time.time() - start_time
-                print("识别结果:", result)
-                print(f"识别用时: {recognition_time:.4f}秒")
-                map_to_execution(result, command_queue)
-                # 清空缓冲
-                audio_buffer = b''
-                silence_frames = 0
+            print('-'*10)
+            # 计算传入语音的时间长度
+            duration = len(audio_buffer) / RATE
+            print(f"录音时长: {duration:.2f}秒")
+            # 记录识别开始时间
+            start_time = time.time()
+            result = model.generate(audio_buffer)
+            # 计算识别用时
+            recognition_time = time.time() - start_time
+            print("识别结果:", result)
+            print(f"识别用时: {recognition_time:.4f}秒")
+            map_to_execution(result['kws_list'], command_queue)
 
         except Empty:
             continue

@@ -1,5 +1,4 @@
 import time
-import numpy as np
 import wave
 import os
 from datetime import datetime
@@ -146,6 +145,7 @@ class FunASR:
         self.cache = {}
         self.last_audio_data = None
         self.last_result = None
+
 
 # 使用示例
 if __name__ == "__main__":
