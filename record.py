@@ -56,4 +56,6 @@ def record_audio(duration=1, sample_rate=16000, channels=1, chunk=1024, output_f
 
 if __name__ == "__main__":
     # 录制1秒音频，保存为recorded_audio.wav
-    record_audio(duration=4, output_file="wav/sl.wav")
+    # 设置按下任意键开始
+    input("按下任意键开始录制...")
+    record_audio(duration=1, output_file="wav/paoxuanfeng.wav")
