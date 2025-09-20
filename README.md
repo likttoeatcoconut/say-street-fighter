@@ -1,3 +1,5 @@
+一个基于funasr实现的语音操作街霸系统。
+视频：https://www.bilibili.com/video/BV1jcpozbEPL
 1. [main_no_streaming.py](main_no_streaming.py) 程序启动入口
 2. [config.py](config.py) 配置文件
 3. [funASR_no_streaming.py](funASR_no_streaming.py) 模型加载处
